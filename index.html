@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TowersTracker — Live Testing / Maintenance</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#142c52">
+<style>
+:root {
+  --bg: #071429;
+  --card: #142c52;
+  --gold: #ffd700;
+  --muted: #a0c4ff;
+  --accent: #5ab0ff;
+  --maintenance: #ff69b4;
+  --delayed: #f39c12;
+  --pause: #9b59b6;
+  --weather: #3498db;
+  --closed: #e74c3c;
+  --green: #2ecc71;
+  --orange: #f39c12;
+  --red: #e74c3c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Orbitron', sans-serif; background: var(--bg); color: #fff; padding: 20px; }
+a { color: var(--accent); }
+.wrap { max-width: 1000px; margin: 0 auto; }
+h1 { text-align: center; margin: 0 0 .25rem; font-size: 2.2rem; }
+.status { margin: .5rem 0; text-align: center; font-size: 1.2rem; }
+.status .announcement { background: var(--accent); color: #000; display: inline-block; padding: .75rem 1.5rem; margin-top:.5rem; border-radius:12px; font-weight:700; text-transform: uppercase; letter-spacing: 1px; }
+.hours, .clock, .weather { text-align: center; color: var(--muted); margin: .5rem 0; font-size:1.1rem; }
+.testing { text-align: center; color: var(--accent); font-style: italic; margin: .5rem 0; font-size:1rem; }
+.maintenance-note { text-align: center; color: var(--maintenance); font-weight: 700; margin-bottom: 1rem; }
+.zone { margin-top: 1rem; font-size: 1.2rem; color: var(--gold); border-bottom: 1px solid #323f5a; padding-bottom: .4rem; }
+.ride { background: var(--card); color: #fff; margin: .6rem 0; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.ride h2 { margin: 0; font-size: 1rem; }
+.badge { padding: .25rem .6rem; border-radius: 8px; font-weight: 700; white-space: pre-line; animation: pulse 1.5s infinite; }
+.badge.no-data { background: var(--accent); color: #000; }
+.badge.maintenance { background: var(--maintenance); color: #fff; }
+.badge.delayed { background: var(--delayed); color: #000; }
+.badge.pause { background: var(--pause); color: #fff; }
+.badge.weather { background: var(--weather); color: #fff; }
+.badge.closed { background: var(--closed); color: #fff; }
+.badge.green { background: var(--green); color: #000; }
+.badge.orange { background: var(--orange); color: #000; }
+.badge.red { background: var(--red); color: #fff; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+footer { margin-top: 2rem; text-align: center; color: #aaa; }
+.bottom-note { margin-top: 1rem; font-size: .85rem; color: var(--muted); }
+</style>
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+
+<div class="status" id="status" aria-live="polite">
+  <div class="announcement">⚡ LIVE TESTING / MAINTENANCE IN PROGRESS</div>
+</div>
+
+<h1>TowersTracker</h1>
+<div class="clock"><strong>Time:</strong> Unavailable</div>
+<div class="hours"><strong>Open Hours:</strong> Unavailable</div>
+<div class="weather"><strong>Current UK Temperature:</strong> Unavailable</div>
+<div class="testing">Simulating ride notifications and queue times…</div>
+<div class="maintenance-note">⚙ Maintenance activities are ongoing</div>
+
+<main id="app" aria-live="polite"></main>
+
+<footer>
+Powered by <a href="https://queue-times.com" target="_blank" rel="noopener">Queue-Times.com</a>.
+<div class="bottom-note">All live data is currently simulated for testing and maintenance purposes.</div>
+</footer>
+</div>
+
+<script>
+const offlineData = { lands:[ { name:'Thrills', rides:['Galactica','Nemesis Reborn','Nemesis Sub-Terra','Oblivion','Rita','Spinball Whizzer','TH13TEEN','The Smiler','Toxicator','Wicker Man']}, { name:'Family', rides:['Battle Galleons','Cuckoo Cars Driving School','Gangsta Granny: The Ride','Sharkbait Reef by SEA LIFE','The Gardens','Heave Ho','Hex - The Legend of the Towers','Marauder\'s Mayhem','Congo River Rapids','Runaway Mine Train']}, { name:'CBeebies', rides:['Andy’s Adventures Dinosaur Dig','Bugbie-Go-Round','Get Set Go Tree Top Adventure','Go Jetters Vroomster Zoom Ride','In The Night Garden Magical Boat Ride','JoJo & Gran Gran At Home','Justin\'s House Pie-O-Matic Factory','Octonauts Rollercoaster Adventure','Peter Rabbit Hippity Hop','Something Special Sensory Garden']}, { name:'Transport', rides:['Monorail to Entrance Plaza','Monorail to Hotels & Car Parks']}, { name:'Skyride', rides:['Skyride to Dark Forest (From Forbidden Valley)','Skyride to Forbidden Valley (from Dark Forest)','Skyride to Forbidden Valley (from Towers St.)','Skyride to Towers St. (From Forbidden Valley)']} ]};
+const notifications = ['No Data','Delayed','Temporary Pause','Weather Delay','Closed Today','Maintenance'];
+const badgeClasses = {'No Data':'no-data','Maintenance':'maintenance','Delayed':'delayed','Temporary Pause':'pause','Weather Delay':'weather','Closed Today':'closed'};
+let rideStates = {};
+let forceNoData = true;
+
+function initRides(){
+    offlineData.lands.forEach(zone => {
+        zone.rides.forEach(name => {
+            const notification = notifications[Math.floor(Math.random()*notifications.length)];
+            let queue = 5 + Math.floor(Math.random()*12)*5;
+            if(name === 'The Gardens') queue = 0;
+            rideStates[name] = {notification, queue};
+        });
+    });
+}
+
+function renderRide(name){
+    const state = rideStates[name];
+    const el = document.createElement('div'); el.className='ride';
+    const title = document.createElement('h2'); title.textContent=name;
+    const badge = document.createElement('span');
+    if(forceNoData){
+        badge.className = `badge no-data`;
+        badge.textContent = 'No Data';
+    } else {
+        badge.className = `badge ${badgeClasses[state.notification]}`;
+        if(['No Data','Delayed','Temporary Pause','Weather Delay'].includes(state.notification)){
+            badge.textContent = `${state.queue} mins`;
+            if(state.queue<=29) badge.className+=' green';
+            else if(state.queue<=59) badge.className+=' orange';
+            else badge.className+=' red';
+        } else {
+            badge.textContent = state.notification;
+        }
+    }
+    el.dataset.notification = state.notification;
+    el.dataset.queue = state.queue;
+    el.append(title,badge);
+    return el;
+}
+
+function renderZone(zone){
+    const z = document.createElement('div'); z.className='zone'; z.textContent=zone.name;
+    document.getElementById('app').appendChild(z);
+    let elements = zone.rides.map(r => renderRide(r));
+    if(forceNoData){
+        elements.forEach(e => document.getElementById('app').appendChild(e));
+    } else {
+        let queueRides = elements.filter(e => ['No Data','Delayed','Temporary Pause','Weather Delay'].includes(e.dataset.notification));
+        let bottomRides = elements.filter(e => ['Closed Today','Maintenance'].includes(e.dataset.notification));
+        queueRides.sort((a,b) => parseInt(a.dataset.queue) - parseInt(b.dataset.queue));
+        [...queueRides, ...bottomRides].forEach(e => document.getElementById('app').appendChild(e));
+    }
+}
+
+function renderAll(){
+    document.getElementById('app').innerHTML='';
+    offlineData.lands.forEach(zone => renderZone(zone));
+}
+
+function incrementQueues(){
+    if(forceNoData) return;
+    Object.keys(rideStates).forEach(name => {
+        let state = rideStates[name];
+        if(['No Data','Delayed','Temporary Pause','Weather Delay'].includes(state.notification)){
+            if(name === 'The Gardens') return;
+            state.queue += 5;
+            if(state.queue>1000) state.queue = 5;
+        }
+    });
+}
+
+function startNoDataCycle(){
+    setInterval(()=>{
+        forceNoData = !forceNoData;
+        renderAll();
+    }, 120000);
+}
+
+function startSimulation(){
+    initRides();
+    renderAll();
+    setInterval(()=>{
+        incrementQueues();
+        renderAll();
+    }, 60000);
+    startNoDataCycle();
+}
+
+document.addEventListener('DOMContentLoaded', startSimulation);
+</script>
+</body>
+</html>
