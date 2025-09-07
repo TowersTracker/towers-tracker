@@ -9,9 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
 
 <!-- Manifest & Icons -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
 <meta name="theme-color" content="#142c52">
 
 <!-- CSS -->
@@ -107,9 +107,8 @@ const badgeClasses = {
     'Closed Today':'closed'
 };
 
-// Ride state storage
 let rideStates = {};
-let forceNoData = true; // start in "No Data" mode
+let forceNoData = true;
 
 // Initialize rides
 function initRides(){
@@ -151,7 +150,7 @@ function renderRide(name){
     return el;
 }
 
-// Render zone with sorted rides
+// Render zone
 function renderZone(zone){
     const z = document.createElement('div'); z.className='zone'; z.textContent=zone.name;
     document.getElementById('app').appendChild(z);
@@ -163,46 +162,42 @@ function renderZone(zone){
     } else {
         let queueRides = elements.filter(e => ['No Data','Delayed','Temporary Pause','Weather Delay'].includes(e.dataset.notification));
         let bottomRides = elements.filter(e => ['Closed Today','Maintenance'].includes(e.dataset.notification));
-        queueRides.sort((a,b) => parseInt(a.dataset.queue) - parseInt(b.dataset.queue));
-        [...queueRides, ...bottomRides].forEach(e => document.getElementById('app').appendChild(e));
+        queueRides.sort((a,b)=>parseInt(a.dataset.queue)-parseInt(b.dataset.queue));
+        [...queueRides,...bottomRides].forEach(e=>document.getElementById('app').appendChild(e));
     }
 }
 
-// Render all zones
 function renderAll(){
     document.getElementById('app').innerHTML='';
     offlineData.lands.forEach(zone => renderZone(zone));
 }
 
-// Increment queues
 function incrementQueues(){
-    if(forceNoData) return; 
-    Object.keys(rideStates).forEach(name => {
+    if(forceNoData) return;
+    Object.keys(rideStates).forEach(name=>{
         let state = rideStates[name];
         if(['No Data','Delayed','Temporary Pause','Weather Delay'].includes(state.notification)){
-            if(name === 'The Gardens') return;
-            state.queue += 5;
-            if(state.queue>1000) state.queue = 5;
+            if(name==='The Gardens') return;
+            state.queue+=5;
+            if(state.queue>1000) state.queue=5;
         }
     });
 }
 
-// Toggle No Data mode every 2 minutes
 function startNoDataCycle(){
     setInterval(()=>{
         forceNoData = !forceNoData;
         renderAll();
-    }, 120000);
+    },120000);
 }
 
-// Start simulation
 function startSimulation(){
     initRides();
     renderAll();
     setInterval(()=>{
         incrementQueues();
         renderAll();
-    }, 60000);
+    },60000);
     startNoDataCycle();
 }
 
