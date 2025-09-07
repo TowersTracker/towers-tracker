@@ -1,13 +1,13 @@
 {
   "name": "TowersTracker",
   "short_name": "TowersTracker",
-  "start_url": ".",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#071429",
   "theme_color": "#142c52",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     }
